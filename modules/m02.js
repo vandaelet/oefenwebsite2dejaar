@@ -22,7 +22,11 @@
     theorie: {
       typen: {
         titel: 'Zo typ je een lettervorm', html:
-          '<ul><li>Typ gewoon de letters en cijfers achter elkaar: <b>6x + 5y</b></li><li>Een macht typ je met een dakje of met het cijfer vlak achter de letter: <b>x^2</b> of <b>x2</b> wordt x².</li><li>Een kommagetal typ je met een komma: <b>1,2x + 2,2</b></li><li>Het minteken is het gewone streepje op je toetsenbord.</li><li>Onder het invulvak zie je hoe je antwoord gelezen wordt. Staat er "nog niet leesbaar", kijk dan na of er een teken ontbreekt.</li></ul>' +
+          '<ul><li>Typ gewoon de letters en cijfers achter elkaar: <b>6x + 5y</b></li>' +
+          '<li><b>Een macht invoeren:</b> zet je cursor achter de letter en klik boven de invulvakken op <b>x²</b> of <b>x³</b>. Voor een andere exponent klik je op <b>xⁿ</b> en typ je daarna de exponent.</li>' +
+          '<li>Op veel Belgische toetsenborden staat links van de 1 ook een toets met ² en ³. Die mag je ook gebruiken.</li>' +
+          '<li>Een kommagetal typ je met een komma: <b>1,2x + 2,2</b></li><li>Het minteken is het gewone streepje op je toetsenbord.</li>' +
+          '<li>Een cijfer vlak achter een letter is geen macht: de coëfficiënt staat altijd vooraan.</li></ul>' +
           '<p>Je antwoord moet volledig herleid zijn: zonder haakjes en met de gelijksoortige eentermen samengenomen. Rangschik volgens dalende machten.</p>'
       },
       letters: {
