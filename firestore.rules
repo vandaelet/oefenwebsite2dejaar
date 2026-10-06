@@ -1,0 +1,71 @@
+rules_version = '2';
+
+// Beveiligingsregels voor de oefensites wiskunde.
+// Dit bestand bevat de regels voor BEIDE sites:
+//   - eerste jaar:  collecties die beginnen met oef_
+//   - tweede jaar:  collecties die beginnen met oef2_
+// Gebruik je voor beide sites hetzelfde Firebase-project, dan volstaat dit ene bestand.
+// Gebruik je een apart project voor het tweede jaar, dan mag je het blok
+// "EERSTE JAAR" weglaten (laten staan kan ook, het doet dan gewoon niets).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Aangemeld met een geverifieerd svsl.be-account
+    function aangemeld() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.matches('.*@svsl[.]be');
+    }
+
+    // ===================== TWEEDE JAAR (oef2_) =====================
+    function isLeerkracht2() {
+      return aangemeld()
+        && exists(/databases/$(database)/documents/oef2_leerkrachten/$(request.auth.token.email));
+    }
+    match /oef2_leerlingen/{uid} {
+      allow read, create, update: if aangemeld() && request.auth.uid == uid;
+      allow read: if isLeerkracht2();
+    }
+    match /oef2_resultaten/{docId} {
+      allow get: if aangemeld() && docId.matches(request.auth.uid + '_.*');
+      allow create, update: if aangemeld()
+        && request.resource.data.uid == request.auth.uid
+        && docId == request.auth.uid + '_' + request.resource.data.moduleId;
+      allow read, delete: if isLeerkracht2();
+    }
+    match /oef2_instellingen/{document} {
+      allow read: if aangemeld();
+      allow write: if isLeerkracht2();
+    }
+    match /oef2_leerkrachten/{email} {
+      allow get: if aangemeld() && request.auth.token.email == email;
+      allow read, write: if isLeerkracht2();
+    }
+
+    // ===================== EERSTE JAAR (oef_) =====================
+    function isLeerkracht() {
+      return aangemeld()
+        && exists(/databases/$(database)/documents/oef_leerkrachten/$(request.auth.token.email));
+    }
+    match /oef_leerlingen/{uid} {
+      allow read, create, update: if aangemeld() && request.auth.uid == uid;
+      allow read: if isLeerkracht();
+    }
+    match /oef_resultaten/{docId} {
+      allow get: if aangemeld() && docId.matches(request.auth.uid + '_.*');
+      allow create, update: if aangemeld()
+        && request.resource.data.uid == request.auth.uid
+        && docId == request.auth.uid + '_' + request.resource.data.moduleId;
+      allow read, delete: if isLeerkracht();
+    }
+    match /oef_instellingen/{document} {
+      allow read: if aangemeld();
+      allow write: if isLeerkracht();
+    }
+    match /oef_leerkrachten/{email} {
+      allow get: if aangemeld() && request.auth.token.email == email;
+      allow read, write: if isLeerkracht();
+    }
+  }
+}
