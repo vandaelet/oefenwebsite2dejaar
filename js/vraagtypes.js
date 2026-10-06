@@ -75,7 +75,6 @@
       if (c === '(') { i++; p = expr(); if (s[i] !== ')') fout(); i++; return exponent(p); }
       if (c && /[a-z]/.test(c)) {
         i++; var v = {}; v[c] = 1; p = {}; p[sleutelVan(v)] = 1;
-        if (s[i] && /\d/.test(s[i])) { var m = /^\d+/.exec(s.slice(i)); i += m[0].length; var r = { '': 1 }; for (var k = 0; k < +m[0] && k < 12; k++) r = pMul(r, p); return r; }
         return exponent(p);
       }
       if (c && /[0-9.]/.test(c)) return exponent({ '': getal() });
@@ -95,7 +94,7 @@
     var n = Object.keys(poly).length || 1;
     if (termen.length !== n) return false;
     return termen.every(function (t) {
-      var kaal = t.replace(/([a-z])\^?\d+/g, '$1');
+      var kaal = t.replace(/([a-z])\^\d+/g, '$1');
       if (!/^[+-]?(\d+(\.\d+)?)?[a-z]*$/.test(kaal) || /^[+-]?$/.test(kaal)) return false;
       var letters = kaal.match(/[a-z]/g) || [];
       return letters.every(function (l, idx) { return letters.indexOf(l) === idx; });
@@ -105,7 +104,7 @@
     return (algNorm(str).match(/[+-]?[^+-]+/g) || []).map(function (t) { var p = algParse(t); if (!p) return 0; var k = Object.keys(p)[0] || '', v = varsVan(k); return Object.keys(v).reduce(function (a, l) { return a + v[l]; }, 0); });
   }
   function algMooi(str) {
-    return esc(String(str)).replace(/([a-zA-Z])\^?(\d+)/g, '$1<sup>$2</sup>').replace(/\)\^(\d+)/g, ')<sup>$1</sup>')
+    return esc(String(str)).replace(/([a-zA-Z])\^(\d+)/g, '$1<sup>$2</sup>').replace(/\)\^(\d+)/g, ')<sup>$1</sup>')
       .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, function (m) { return '<sup>' + m.split('').map(function (c) { return SUPER.indexOf(c); }).join('') + '</sup>'; })
       .replace(/\*/g, '·').replace(/\s*([+\-−])\s*/g, function (m, o, pos) { return pos === 0 ? '−' === o || o === '-' ? '−' : '' : ' ' + (o === '+' ? '+' : '−') + ' '; }).replace(/\(\s−\s/g, '(−').replace(/·\s−\s/g, '· −');
   }
@@ -148,13 +147,14 @@
       }
     } else if (d.t === 'alg') {
       leeg = e.value.trim() === ''; var pv = algParse(e.value), pj = algParse(d.a);
-      if (!leeg && !pv) nota = 'Een antwoord kon niet gelezen worden. Typ bijvoorbeeld 3x^2 - 5x + 1.';
+      if (!leeg && !pv) nota = 'Een antwoord kon niet gelezen worden. Kijk na of er geen teken of haakje ontbreekt.';
       else if (pv && algGelijk(pv, pj)) {
         if (d.vrij || algHerleid(e.value, pv)) {
           ok = true; var gr = algGraden(e.value);
           if (!d.vrij && gr.some(function (g, idx) { return idx > 0 && g > gr[idx - 1]; })) opmerking = 'Tip: rangschik je eindresultaat volgens dalende machten.';
         } else nota = 'Een antwoord heeft de juiste waarde, maar is nog niet volledig herleid of niet volgens de afspraken genoteerd.';
       }
+      if (!ok && !leeg && cijferNaLetter(e.value)) nota = MACHT_NOTA;
     } else if (d.t === 'getal') {
       leeg = e.value.trim() === ''; var x = leesGetal(e.value);
       ok = [].concat(d.a).some(function (a) { return Math.abs(x - a) <= (d.tol || 1e-9); });
@@ -178,15 +178,47 @@
   }
   function toonAlg(root, e) {
     var vb = root.querySelector('[data-vb="' + e.dataset.k + '"]'); if (!vb) return;
-    var leeg = e.value.trim() === '', okk = leeg || !!algParse(e.value);
-    vb.innerHTML = leeg ? '' : okk ? algMooi(e.value) : 'nog niet leesbaar';
-    vb.classList.toggle('onleesbaar', !okk);
+    var leeg = e.value.trim() === '', okk = leeg || !!algParse(e.value), macht = !leeg && cijferNaLetter(e.value);
+    vb.textContent = macht ? 'Macht? Gebruik de knop x².' : okk ? '' : 'nog niet leesbaar';
+    vb.classList.toggle('onleesbaar', macht || !okk);
   }
-  function veldCtl(root, velden) {
+  var MACHT_NOTA = 'Staat er een cijfer vlak achter een letter? Een macht voer je in met de knoppen x², x³ of xⁿ. Een coëfficiënt staat vooraan.';
+  function cijferNaLetter(str) { return /[a-z]\d/.test(algNorm(str)); }
+  function naarExponent(cijfers) { return String(cijfers).split('').map(function (c) { return SUPER.charAt(+c); }).join(''); }
+  /* zet getypte tekst om naar echte exponenten: in de exponentmodus worden cijfers een exponent, en ^2 wordt ² */
+  function verwerkMacht(inp, ev, macht) {
+    var val = inp.value, pos = inp.selectionStart == null ? val.length : inp.selectionStart;
+    var data = ev ? ev.data : null, getypt = !!ev && typeof ev.inputType === 'string' && ev.inputType.indexOf('insert') === 0;
+    if (macht && macht.aan && getypt && data != null) {
+      if (/^\d$/.test(data) && val.charAt(pos - 1) === data) val = val.slice(0, pos - 1) + naarExponent(data) + val.slice(pos);
+      else if (data !== '^') macht.zet(false);
+    }
+    function om(t) { return t.replace(/\^(\d+)/g, function (m, c) { return naarExponent(c); }); }
+    var voor = om(val.slice(0, pos)), na = om(val.slice(pos));
+    if (macht && /\^$/.test(voor)) { voor = voor.slice(0, -1); macht.zet(true); }
+    if (voor + na !== inp.value) { inp.value = voor + na; try { inp.setSelectionRange(voor.length, voor.length); } catch (e) { /* ok */ } }
+  }
+  function voegIn(inp, tekst) {
+    var a = inp.selectionStart == null ? inp.value.length : inp.selectionStart, b = inp.selectionEnd == null ? a : inp.selectionEnd;
+    inp.value = inp.value.slice(0, a) + tekst + inp.value.slice(b);
+    inp.focus(); try { inp.setSelectionRange(a + tekst.length, a + tekst.length); } catch (e) { /* ok */ }
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function veldCtl(root, velden, macht) {
     var keys = Object.keys(velden || {});
+    function isAlg(v) { return !!v && !!velden[v.dataset.k] && velden[v.dataset.k].t === 'alg'; }
+    root.addEventListener('focusin', function (ev) {
+      var v = ev.target.closest('.veld'); if (!macht || !isAlg(v)) return;
+      if (macht.veld !== v) macht.zet(false);
+      macht.veld = v;
+    });
+    root.addEventListener('compositionend', function (ev) {
+      var v = ev.target.closest('.veld'); if (!isAlg(v)) return;
+      verwerkMacht(v, null, macht); toonAlg(root, v);
+    });
     root.addEventListener('input', function (ev) {
       var v = ev.target.closest('.veld'); if (!v) return; v.classList.remove('juist', 'fout');
-      if (velden[v.dataset.k] && velden[v.dataset.k].t === 'alg') toonAlg(root, v);
+      if (isAlg(v)) { if (!ev.isComposing) verwerkMacht(v, ev, macht); toonAlg(root, v); }
       var m = root.querySelector('[data-m="' + v.dataset.k + '"]'); if (m) m.textContent = '';
     });
     return {
@@ -201,20 +233,47 @@
   }
 
   /* ---------- invul en stappen ---------- */
-  function algTip(root, velden) {
-    if (Object.keys(velden || {}).some(function (k) { return velden[k].t === 'alg'; }))
-      root.appendChild(el('p', 'aanwijzing', 'Typ een macht als x^2 of x2. Onder het invulvak zie je hoe je antwoord gelezen wordt.'));
+  /* knoppenbalk om machten in te voeren; geeft de toestand terug die veldCtl gebruikt */
+  function machtBalk(root, velden) {
+    if (!Object.keys(velden || {}).some(function (k) { return velden[k].t === 'alg'; })) return null;
+    var balk = el('div', 'machtbalk', '<span class="machtlabel">Macht invoeren:</span>' +
+      '<button type="button" class="machtknop" data-exp="²" title="Kwadraat invoegen">x<sup>2</sup></button>' +
+      '<button type="button" class="machtknop" data-exp="³" title="Derde macht invoegen">x<sup>3</sup></button>' +
+      '<button type="button" class="machtknop" data-modus="1" aria-pressed="false" title="Andere exponent typen">x<sup>n</sup></button>' +
+      '<span class="machtstatus" aria-live="polite"></span>');
+    balk.setAttribute('role', 'toolbar'); balk.setAttribute('aria-label', 'Macht invoeren');
+    root.appendChild(balk);
+    var uitleg = 'Zet je cursor achter de letter en klik op een knop.';
+    var status = balk.querySelector('.machtstatus'), modusKnop = balk.querySelector('[data-modus]');
+    var macht = {
+      aan: false, veld: null,
+      zet: function (aan) {
+        macht.aan = !!aan; modusKnop.classList.toggle('actief', macht.aan); modusKnop.setAttribute('aria-pressed', macht.aan);
+        status.textContent = macht.aan ? 'Typ nu de exponent.' : uitleg; status.classList.toggle('actief', macht.aan);
+      }
+    };
+    macht.zet(false);
+    function doel() { return macht.veld && root.contains(macht.veld) ? macht.veld : root.querySelector('.algwrap input.veld'); }
+    balk.querySelectorAll('.machtknop').forEach(function (b) {
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); });     // het invulveld houdt de cursor
+      b.addEventListener('click', function () {
+        var inp = doel(); if (!inp) return; macht.veld = inp;
+        if (b.dataset.exp) { macht.zet(false); voegIn(inp, b.dataset.exp); }
+        else { macht.zet(!macht.aan); inp.focus(); }
+      });
+    });
+    return macht;
   }
   VT.invul = function (root, v) {
-    algTip(root, v.velden);
+    var macht = machtBalk(root, v.velden);
     var d = el('div', 'invul', vulSjabloon(v.sjabloon, v.velden)); root.appendChild(d);
-    return veldCtl(d, v.velden);
+    return veldCtl(d, v.velden, macht);
   };
   VT.stappen = function (root, v) {
-    algTip(root, v.velden);
+    var macht = machtBalk(root, v.velden);
     var html = '<ol class="stappen">' + v.stappen.map(function (s) { return '<li>' + vulSjabloon(s, v.velden) + '</li>'; }).join('') + '</ol>';
     var d = el('div', 'invul', html); root.appendChild(d);
-    return veldCtl(d, v.velden);
+    return veldCtl(d, v.velden, macht);
   };
 
   /* ---------- meerkeuze ---------- */
