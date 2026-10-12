@@ -6,6 +6,8 @@
   var S = { user: null, tab: 'res', mod: '', groep: '', weergave: 'delen', deel: '', leerlingen: null, inst: {}, res: {}, rijen: [] };
 
   function actief(m) { var a = (S.inst.actief || {})[m.id]; return a == null ? m.standaardActief !== false : !!a; }
+  function deelUit(m, d) { return ((S.inst.delenUit || {})[m.id] || []).indexOf(d.id) >= 0; }
+  function modTitel(m) { return m.label ? m.label : 'Module ' + m.nummer + ': ' + m.titel; }
   function mod() { return window.MODULES.find(function (m) { return m.id === S.mod; }) || window.MODULES[0]; }
   function datum(x) { var d = O.tijd(x); return d ? d.toLocaleString('nl-BE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''; }
 
@@ -80,7 +82,7 @@
 
   function tabelDelen(m, rijen) {
     var totV = 0; m.delen.forEach(function (d) { totV += d.vragen.length; });
-    var h = '<table class="res"><thead><tr><th class="l">Leerling</th><th>Groep</th>' + m.delen.map(function (d) { return '<th title="' + esc(d.titel) + '">' + esc(d.nr) + '. ' + esc(d.titel) + '<span class="mini">' + d.vragen.length + ' vragen</span></th>'; }).join('') + '<th>Totaal<span class="mini">' + totV + ' vragen</span></th><th>Laatst actief</th></tr></thead><tbody>';
+    var h = '<table class="res"><thead><tr><th class="l">Leerling</th><th>Groep</th>' + m.delen.map(function (d) { return '<th title="' + esc(d.titel) + '"' + (deelUit(m, d) ? ' class="uitgeschakeld"' : '') + '>' + esc(d.nr) + '. ' + esc(d.titel) + '<span class="mini">' + d.vragen.length + ' vragen' + (deelUit(m, d) ? ', staat uit' : '') + '</span></th>'; }).join('') + '<th>Totaal<span class="mini">' + totV + ' vragen</span></th><th>Laatst actief</th></tr></thead><tbody>';
     var som = m.delen.map(function () { return { g: 0, j: 0 }; });
     rijen.forEach(function (r) {
       var tg = 0, tj = 0;
@@ -133,7 +135,7 @@
     var tekst = [kop].concat(regels).map(function (r) { return r.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['\ufeff' + tekst], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'resultaten-module-' + m.nummer + (S.groep ? '-' + S.groep : '') + '.csv';
+    a.download = 'resultaten-' + (m.label ? 'diagnostische-module' : 'module-' + m.nummer) + (S.groep ? '-' + S.groep : '') + '.csv';
     document.body.appendChild(a); a.click(); a.remove();
   }
 
@@ -144,10 +146,10 @@
     var d = m.delen.find(function (x) { return x.id === S.deel; }) || m.delen[0];
     var rijen = S.rijen.filter(function (r) { return !S.groep || r.groep === S.groep; });
     var h = '<div class="filters">' +
-      '<label>Module<select id="fMod">' + window.MODULES.map(function (x) { return '<option value="' + x.id + '"' + (x.id === m.id ? ' selected' : '') + '>Module ' + x.nummer + ': ' + esc(x.titel) + '</option>'; }).join('') + '</select></label>' +
+      '<label>Module<select id="fMod">' + window.MODULES.map(function (x) { return '<option value="' + x.id + '"' + (x.id === m.id ? ' selected' : '') + '>' + esc(modTitel(x)) + '</option>'; }).join('') + '</select></label>' +
       '<label>Niveaugroep<select id="fGroep"><option value="">Alle groepen</option>' + C.groepen.map(function (g) { return '<option' + (g === S.groep ? ' selected' : '') + '>' + esc(g) + '</option>'; }).join('') + '</select></label>' +
       '<label>Weergave<select id="fWeergave"><option value="delen"' + (S.weergave === 'delen' ? ' selected' : '') + '>Overzicht per tussentitel</option><option value="vragen"' + (S.weergave === 'vragen' ? ' selected' : '') + '>Detail per vraag</option></select></label>' +
-      (S.weergave === 'vragen' ? '<label>Tussentitel<select id="fDeel">' + m.delen.map(function (x) { return '<option value="' + x.id + '"' + (x.id === d.id ? ' selected' : '') + '>' + esc(x.nr + '. ' + x.titel) + '</option>'; }).join('') + '</select></label>' : '') +
+      (S.weergave === 'vragen' ? '<label>Tussentitel<select id="fDeel">' + m.delen.map(function (x) { return '<option value="' + x.id + '"' + (x.id === d.id ? ' selected' : '') + '>' + esc(x.nr + '. ' + x.titel) + (deelUit(m, x) ? ' (staat uit)' : '') + '</option>'; }).join('') + '</select></label>' : '') +
       '<button type="button" class="knop klein" id="bVernieuw">Vernieuw</button><button type="button" class="knop klein" id="bCsv">Download als csv</button></div>';
     h += '<p class="onder" style="margin-bottom:8px">' + rijen.length + (rijen.length === 1 ? ' leerling' : ' leerlingen') + (S.groep ? ' in ' + esc(S.groep) : '') + '. Alleen leerlingen die zich al eens aanmeldden, staan in de lijst.</p>';
     h += '<div class="tabelwrap">' + (rijen.length ? (S.weergave === 'vragen' ? tabelVragen(m, d, rijen) : tabelDelen(m, rijen)) : '<p class="leeg">Nog geen leerlingen' + (S.groep ? ' in deze groep' : '') + '.</p>') + '</div>';
@@ -164,23 +166,49 @@
 
   /* ---------- tabblad modules ---------- */
   function tabModules(el) {
-    var h = '<div class="kaart-blok"><div class="balk">Modules open zetten</div><div class="blok-in"><p class="onder" style="margin-bottom:6px">Vink aan welke modules de leerlingen mogen zien. Een wijziging wordt meteen bewaard.</p>';
+    var h = '<div class="kaart-blok"><div class="balk">Modules en onderdelen open zetten</div><div class="blok-in"><p class="onder" style="margin-bottom:6px">Vink aan welke modules de leerlingen mogen zien. Klik op <span class="accent">Onderdelen kiezen</span> om binnen een module enkele tussentitels uit te schakelen. Een wijziging wordt meteen bewaard.</p>';
     window.MODULES.forEach(function (m) {
       var n = 0; m.delen.forEach(function (d) { n += d.vragen.length; });
-      h += '<label class="schakel"><input type="checkbox" data-m="' + m.id + '"' + (actief(m) ? ' checked' : '') + '><span class="wat"><strong>Module ' + m.nummer + ': ' + esc(m.titel) + '</strong><span class="mini">' + m.delen.length + ' tussentitels, ' + n + ' vragen</span></span></label>';
+      h += '<div class="modblok" data-blok="' + m.id + '"><label class="schakel"><input type="checkbox" data-m="' + m.id + '"' + (actief(m) ? ' checked' : '') + '><span class="wat"><strong>' + esc(modTitel(m)) + '</strong><span class="mini">' + m.delen.length + ' tussentitels, ' + n + ' vragen</span></span></label>' +
+        '<details class="delenkeuze"><summary>Onderdelen kiezen <span class="telaan" data-tel="' + m.id + '"></span></summary>' +
+        '<div class="delenknoppen"><button type="button" class="knop klein" data-alles="' + m.id + '">Alles aan</button><button type="button" class="knop klein" data-niets="' + m.id + '">Alles uit</button></div>' +
+        m.delen.map(function (d) {
+          return '<label class="schakel deel"><input type="checkbox" data-mod="' + m.id + '" data-deel="' + d.id + '"' + (deelUit(m, d) ? '' : ' checked') + '><span class="wat">' + esc(d.nr + '. ' + d.titel) + '<span class="mini">' + d.vragen.length + ' vragen</span></span></label>';
+        }).join('') + '</details></div>';
     });
     h += '<p id="modStatus" class="bewaard" style="margin-top:8px"></p></div></div>' +
       '<div class="kaart-blok"><div class="balk">Een module toevoegen</div><div class="blok-in"><ul class="vinklijst"><li>Zet het nieuwe modulebestand (bijvoorbeeld m03.js) in de map <span class="accent">modules</span> op GitHub.</li><li>Voeg de bestandsnaam toe in <span class="accent">modules/lijst.js</span>.</li><li>Vink de module hier aan zodra je leerlingen ermee mogen oefenen.</li></ul></div></div>';
     el.innerHTML = h;
-    el.querySelectorAll('input[data-m]').forEach(function (cb) {
-      cb.addEventListener('change', async function () {
-        var st = document.getElementById('modStatus'), a = {};
-        window.MODULES.forEach(function (m) { a[m.id] = el.querySelector('input[data-m="' + m.id + '"]').checked; });
-        S.inst = { actief: a }; st.textContent = 'Bewaren…';
-        try { await O.bewaarInstellingen(S.inst); st.textContent = '✓ Bewaard'; }
-        catch (e) { st.textContent = 'Niet bewaard. Controleer je internetverbinding.'; }
+
+    function telAan() {
+      window.MODULES.forEach(function (m) {
+        var boxes = el.querySelectorAll('input[data-mod="' + m.id + '"]'), aan = 0;
+        boxes.forEach(function (b) { if (b.checked) aan++; });
+        var modAan = el.querySelector('input[data-m="' + m.id + '"]').checked;
+        el.querySelector('[data-tel="' + m.id + '"]').textContent = '(' + aan + ' van ' + boxes.length + ' aan' + (modAan && !aan ? ': de leerlingen zien deze module niet' : '') + ')';
+        el.querySelector('[data-blok="' + m.id + '"]').classList.toggle('moduit', !modAan);
+      });
+    }
+    async function bewaar() {
+      var st = document.getElementById('modStatus'), a = {}, u = {};
+      window.MODULES.forEach(function (m) {
+        a[m.id] = el.querySelector('input[data-m="' + m.id + '"]').checked;
+        var uit = []; el.querySelectorAll('input[data-mod="' + m.id + '"]').forEach(function (b) { if (!b.checked) uit.push(b.dataset.deel); });
+        if (uit.length) u[m.id] = uit;
+      });
+      S.inst = { actief: a, delenUit: u }; telAan(); st.textContent = 'Bewaren…';
+      try { await O.bewaarInstellingen(S.inst); st.textContent = '✓ Bewaard'; }
+      catch (e) { st.textContent = 'Niet bewaard. Controleer je internetverbinding.'; }
+    }
+    el.querySelectorAll('input[data-m], input[data-deel]').forEach(function (cb) { cb.addEventListener('change', bewaar); });
+    el.querySelectorAll('[data-alles], [data-niets]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.dataset.alles || b.dataset.niets, zet = !!b.dataset.alles;
+        el.querySelectorAll('input[data-mod="' + id + '"]').forEach(function (x) { x.checked = zet; });
+        bewaar();
       });
     });
+    telAan();
   }
 
   /* ---------- tabblad leerkrachten ---------- */

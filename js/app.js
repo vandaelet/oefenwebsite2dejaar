@@ -9,12 +9,16 @@
   try { uitlegOpen = !localStorage.getItem('oefensite_uitleg_' + O.prefix); } catch (e) { uitlegOpen = true; }
   var STATUSNAAM = { j1: 'juist', j: 'juist', f: 'nog niet juist', o: 'oplossing bekeken', '': 'nog niet gemaakt' };
 
-  function actief(m) { var a = (S.inst.actief || {})[m.id]; return a == null ? m.standaardActief !== false : !!a; }
+  function actief(m) { var a = (S.inst.actief || {})[m.id]; return (a == null ? m.standaardActief !== false : !!a) && delen(m).length > 0; }
+  /* onderdelen die de leerkracht niet uitschakelde */
+  function delen(m) { var uit = (S.inst.delenUit || {})[m.id] || []; return m.delen.filter(function (d) { return uit.indexOf(d.id) < 0; }); }
+  function modNaam(m) { return m.label || 'Module ' + m.nummer; }
+  function modTitel(m) { return m.label ? m.label : 'Module ' + m.nummer + ': ' + m.titel; }
   function sleutel(d, v) { return d.id + '_' + v.id; }
   function status(m, d, v) { var r = (S.res[m.id] || {})[sleutel(d, v)]; return r ? (r.s || '') : ''; }
   function tel(m, deel) {
     var tot = 0, gemaakt = 0, juist = 0;
-    (deel ? [deel] : m.delen).forEach(function (d) {
+    (deel ? [deel] : delen(m)).forEach(function (d) {
       d.vragen.forEach(function (v) { tot++; var s = status(m, d, v); if (s) gemaakt++; if (s === 'j1' || s === 'j') juist++; });
     });
     return { tot: tot, gemaakt: gemaakt, juist: juist };
@@ -77,7 +81,7 @@
     if (!lijst.length) html += '<div class="kaart-blok"><div class="blok-in">Er staan nog geen modules open. Vraag het aan je leerkracht.</div></div>';
     html += '<div class="modules">' + lijst.map(function (m) {
       var t = tel(m), pct = t.tot ? Math.round(t.gemaakt / t.tot * 100) : 0;
-      return '<a class="modulekaart" href="#/m/' + m.id + '"><div class="kaart-blok"><div class="balk">Module ' + m.nummer + '</div><div class="blok-in">' +
+      return '<a class="modulekaart" href="#/m/' + m.id + '"><div class="kaart-blok"><div class="balk">' + esc(modNaam(m)) + '</div><div class="blok-in">' +
         '<p class="domein">' + esc(m.domein || '') + '</p><h2>' + esc(m.titel) + '</h2>' +
         '<div class="voortgang" aria-hidden="true"><span style="width:' + pct + '%"></span></div>' +
         '<p class="voortgangtekst">' + t.gemaakt + ' van ' + t.tot + ' vragen gemaakt, ' + t.juist + ' juist</p></div></div></a>';
@@ -94,11 +98,12 @@
   async function toonModule(m) {
     tekenKop(); await laadRes(m);
     var t = tel(m);
-    var html = '<p class="kruimel"><a href="#/">← Alle modules</a></p><h1 class="paginatitel">Module ' + m.nummer + ': ' + esc(m.titel) + '</h1>' +
+    var html = '<p class="kruimel"><a href="#/">← Alle modules</a></p><h1 class="paginatitel">' + esc(modTitel(m)) + '</h1>' + (m.label && m.intro ? '<p class="onder" style="margin-bottom:6px">' + esc(m.intro) + '</p>' : '') +
       '<p class="onder">Je maakte ' + t.gemaakt + ' van de ' + t.tot + ' vragen. Nog ' + (t.tot - t.gemaakt) + ' te gaan. Kies zelf een vraag.</p>';
-    m.delen.forEach(function (d) {
+    delen(m).forEach(function (d) {
       var td = tel(m, d);
-      html += '<section class="kaart-blok"><div class="balk">' + esc(d.nr + '  ' + d.titel) + '<span class="rechts">' + td.gemaakt + ' van ' + td.tot + ' gemaakt</span></div><div class="blok-in"><div class="tegels">' +
+      html += '<section class="kaart-blok"><div class="balk">' + esc(d.nr + '  ' + d.titel) + '<span class="rechts">' + td.gemaakt + ' van ' + td.tot + ' gemaakt</span></div><div class="blok-in">' +
+        (d.info ? '<p class="deelinfo">' + esc(d.info) + '</p>' : '') + '<div class="tegels">' +
         d.vragen.map(function (v, i) {
           var s = status(m, d, v);
           return '<a class="tegel" href="#/m/' + m.id + '/' + d.id + '/' + v.id + '" title="' + STATUSNAAM[s] + '"><span class="nr">' + (i + 1) + '</span><span class="naam">' + esc(v.titel || 'Vraag ' + (i + 1)) + '</span><span class="st ' + s + '" aria-label="' + STATUSNAAM[s] + '">' + (ICOON[s] || '') + '</span></a>';
@@ -123,15 +128,15 @@
   /* ---------- vraag ---------- */
   async function toonVraag(m, did, vid) {
     tekenKop(); await laadRes(m);
-    var d = m.delen.find(function (x) { return x.id === did; });
+    var d = delen(m).find(function (x) { return x.id === did; });
     var vi = d ? d.vragen.findIndex(function (x) { return x.id === vid; }) : -1;
     if (vi < 0) return toonModule(m);
     var v = d.vragen[vi], key = sleutel(d, v);
-    var plat = []; m.delen.forEach(function (dd) { dd.vragen.forEach(function (vv) { plat.push({ d: dd, v: vv }); }); });
+    var plat = []; delen(m).forEach(function (dd) { dd.vragen.forEach(function (vv) { plat.push({ d: dd, v: vv }); }); });
     var pi = plat.findIndex(function (x) { return x.v === v; });
     function link(x) { return '#/m/' + m.id + '/' + x.d.id + '/' + x.v.id; }
 
-    hoofd.innerHTML = '<p class="kruimel"><a href="#/">Alle modules</a> › <a href="#/m/' + m.id + '">Module ' + m.nummer + ': ' + esc(m.titel) + '</a></p>' +
+    hoofd.innerHTML = '<p class="kruimel"><a href="#/">Alle modules</a> › <a href="#/m/' + m.id + '">' + esc(modTitel(m)) + '</a></p>' +
       '<section class="kaart-blok vraagblok" id="vraagblok"><div class="balk">' + esc(d.nr + '  ' + d.titel) + '<span class="rechts">Vraag ' + (vi + 1) + ' van ' + d.vragen.length + '</span></div>' +
       '<nav class="stippen" aria-label="Vragen van dit onderdeel"><span class="lbl">Vragen:</span>' + d.vragen.map(function (vv, i) {
         var s = status(m, d, vv);

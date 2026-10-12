@@ -50,6 +50,12 @@ De link voor leerkrachten is hetzelfde adres met `leerkracht.html` erachter.
 
 Op de leerkrachtenpagina, tabblad **Modules**, vink je aan welke modules de leerlingen zien. Een wijziging is meteen actief.
 
+Binnen een module kun je ook afzonderlijke onderdelen (tussentitels) uitschakelen: klik onder de module op **Onderdelen kiezen** en vink uit wat de leerlingen (nog) niet mogen oefenen. Met **Alles aan** en **Alles uit** zet je alle onderdelen in één keer. Een uitgeschakeld onderdeel verdwijnt voor de leerlingen; hun resultaten blijven bewaard. In de resultatentabel staat zo'n onderdeel grijs met "staat uit".
+
+### De diagnostische module
+
+De diagnostische module (`modules/m00.js`) staat als eerste in het keuzemenu. Ze herhaalt de leerstof van het eerste jaar in 15 onderdelen (wiskundetaal, coördinaten, bewerkingen met gehele en rationale getallen, machten en vierkantswortels, volgorde van bewerkingen, vergelijkingen en vraagstukken, verzamelingen, procenten, data, metriek stelsel, omtrek en oppervlakte, oppervlakte en volume). Bij elk onderdeel staat vanaf welke module van het tweede jaar die voorkennis nodig is. Zet via **Onderdelen kiezen** alleen de onderdelen open die je op dat moment wil laten oefenen.
+
 ## 7. Een nieuwe module toevoegen
 
 1. Zet het nieuwe bestand (bijvoorbeeld `m03.js`) in de map `modules` van deze site.

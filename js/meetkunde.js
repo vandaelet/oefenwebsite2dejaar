@@ -530,6 +530,12 @@
         ok = uniek.length === c.n;
         tekst = uniek.length > c.n ? 'Je tekende te veel rechten. Wis wat er niet bij hoort.' : 'Je tekende nog niet alle rechten.';
         break;
+      case 'punten':
+        var o = z.cfg.assen || { x: 0, y: 0 }, goed = 0, fout = 0;
+        eigenP.forEach(function (p) { if (c.voorwaarde(Math.round((p.x - o.x) * 100) / 100, Math.round((p.y - o.y) * 100) / 100)) goed++; else fout++; });
+        ok = goed >= c.min && fout === 0;
+        tekst = fout ? 'Er ' + (fout === 1 ? 'staat 1 punt' : 'staan ' + fout + ' punten') + ' dat niet voldoet. Wis het met de gom.' : 'Je tekende nog maar ' + goed + ' van de ' + c.min + ' punten.';
+        break;
       default: tekst = 'Onbekende controle.';
     }
     return { ok: ok, tekst: c.fout || tekst };
@@ -569,6 +575,7 @@
           if (P) { if (c.lijn) { P.x = c.lijn[1][0]; P.y = c.lijn[1][1]; } else { P.x = c.x; P.y = c.y; } z.gewijzigd = true; }
           break;
         case 'as': lijn('rechte', punt(c.xy[0][0], c.xy[0][1]), punt(c.xy[1][0], c.xy[1][1])); break;
+        case 'punten': var oo = z.cfg.assen || { x: 0, y: 0 }; (c.opl || []).forEach(function (q) { var pp = punt(q[0] + oo.x, q[1] + oo.y); pp.verberg = false; }); break;
       }
     });
     if (alsEigen) z.gewijzigd = true;

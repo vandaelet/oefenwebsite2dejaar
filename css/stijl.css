@@ -366,3 +366,23 @@ table.res tr.som td { background: #F5F8F8; font-weight: 600; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media print { .kop, .acties, .stippen { display: none; } body { background: #fff; } }
+
+/* aan/uit per onderdeel (leerkrachtenpagina) */
+.modblok { border-bottom: 1px solid var(--lijn); padding-bottom: 6px; }
+.modblok:last-of-type { border-bottom: none; }
+.modblok .schakel { border-bottom: none; }
+.modblok.moduit .delenkeuze { opacity: .55; }
+.delenkeuze { margin: -4px 0 6px 34px; }
+.delenkeuze summary { cursor: pointer; color: var(--teal-donker); font-weight: 600; font-size: .92rem; padding: 4px 0; }
+.delenkeuze .telaan { color: var(--grijs); font-weight: 400; }
+.delenknoppen { display: flex; gap: 8px; margin: 6px 0 4px; }
+.schakel.deel { padding: 5px 0; }
+.schakel.deel input[type=checkbox] { width: 18px; height: 18px; }
+table.res th.uitgeschakeld { background: #EEF1F1; color: var(--grijs); }
+/* diagnostische module */
+.deelinfo { font-size: .88rem; color: var(--grijs); margin: 0 0 8px; }
+/* vierkantswortel met streep */
+.wortel { display: inline-block; white-space: nowrap; margin: 0 .1em; vertical-align: baseline; line-height: 1.2; align-self: center; }
+.wortel .wt { display: inline-block; font-size: 1.1em; padding-right: 1px; }
+.wortel .wi { display: inline-block; border-top: 2px solid currentColor; padding: 2px .2em 0; line-height: 1.1; }
+.figuur svg.vrij { max-height: max(240px, calc(100vh - 420px)); width: auto; }

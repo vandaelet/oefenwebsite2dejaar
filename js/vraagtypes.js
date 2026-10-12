@@ -10,7 +10,8 @@
     if (s == null) return '';
     return String(s)
       .replace(/\{([^{}\/]+)\/([^{}\/]+)\}/g, '<span class="breuk"><span class="t">$1</span><span class="n">$2</span></span>')
-      .replace(/\^([A-Z])(\d?)/g, function (m, l, d) { return '<span class="hk">' + l + '</span>' + (d ? '<sub>' + d + '</sub>' : ''); });
+      .replace(/\^([A-Z])(\d?)/g, function (m, l, d) { return '<span class="hk">' + l + '</span>' + (d ? '<sub>' + d + '</sub>' : ''); })
+      .replace(/√⟨([^⟩]*)⟩/g, '<span class="wortel"><span class="wt">√</span><span class="wi">$1</span></span>');
   }
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function schud(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }

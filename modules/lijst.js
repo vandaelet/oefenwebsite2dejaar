@@ -5,6 +5,7 @@
    Aan- en afvinken voor de leerlingen doe je op de leerkrachtenpagina.
    ===================================================================== */
 window.MODULE_BESTANDEN = [
+  "m00.js",
   "m01.js",
   "m02.js"
 ];
